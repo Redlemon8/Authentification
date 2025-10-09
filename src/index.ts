@@ -15,13 +15,14 @@ app.use(router);
 // Connexion à MongoDB
 connectDB();
 
-// Fonction pour démarrer le serveur
+// Fonction pour démarrer le serveur et gérer les erreurs
 const startServer = (port: number) => {
   const server = app.listen(port, (): void => {
     console.log(`🚀 Serveur démarré sur le port ${port}`);
     console.log(`📱 URL: http://localhost:${port}`);
   });
 
+  // Gestion des erreurs serveur si le port est occupé
   server.on('error', (err: any) => {
     if (err.code === 'EADDRINUSE') {
       console.log(`⚠️  Port ${port} occupé, tentative sur le port ${port + 1}`);
