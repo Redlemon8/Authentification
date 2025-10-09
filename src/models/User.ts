@@ -1,0 +1,22 @@
+import { Schema, model } from 'mongoose';
+import argon2 from 'argon2';
+
+const userSchema = new Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+}, { timestamps: true });
+
+userSchema.pre('save', async function(next) {
+    if (this.isModified('password')) {
+        this.password = await argon2.hash(this.password);
+    }
+    next();
+});
+
+userSchema.index({ email: 1 }, { unique: true });
+const User = model('User', userSchema);
+
+export default User;

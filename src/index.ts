@@ -3,7 +3,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import router from './router';
 import connectDB from './db/database';
-
+import { errorHandler, notFoundHandler } from './middlewares/handleError';
 const app: Application = express();
 
 // Middleware
@@ -11,6 +11,8 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(router);
+app.use(errorHandler);
+app.use(notFoundHandler);
 
 // Connexion à MongoDB
 connectDB();
