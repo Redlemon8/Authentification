@@ -1,6 +1,7 @@
 //src/middlewares/handleError.ts
 import { Request, Response, NextFunction } from 'express';
 import { AppError, ValidationError } from '../utils/error';
+import logger from '../utils/logger';
 
 function cw(controller: (req: Request, res: Response, next: NextFunction) => Promise<void>) {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -14,11 +15,22 @@ function cw(controller: (req: Request, res: Response, next: NextFunction) => Pro
 
 // * Middleware de gestion d'erreurs
 function errorHandler(err: any, req: Request, res: Response, next: NextFunction): void {
-    // Log l'erreur pour le débogage (en développement)
-    console.error('❌ Erreur capturée:', err);
+    // Log de l'erreur avec Winston
+    logger.error(`Erreur ${err.statusCode || 500}: ${err.message}`, {
+        url: req.url,
+        method: req.method,
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        stack: err.stack
+    });
 
     // * Si c'est une de nos erreurs personnalisées 404 ou 400 (schémas)
     if (err instanceof AppError) {
+        logger.error('Erreur personnalisée', {
+            name: err.name,
+            message: err.message,
+            statusCode: err.statusCode
+        });
         res.status(err.statusCode).json({
             error: err.message,
             // * Si l'erreur vient du schéma on ajoute les détails au message 
@@ -29,6 +41,11 @@ function errorHandler(err: any, req: Request, res: Response, next: NextFunction)
 
     // * Gestion des erreurs MongoDB (duplication d'email par exemple)
     if (err.code === 11000 || err.name === 'MongoServerError') {
+        logger.error('Erreur MongoDB', {
+            name: err.name,
+            message: err.message,
+            code: err.code
+        });
         res.status(409).json({
             error: 'Cette ressource existe déjà (email en double)',
         });
@@ -37,6 +54,11 @@ function errorHandler(err: any, req: Request, res: Response, next: NextFunction)
 
     // * Erreurs de validation Mongoose
     if (err.name === 'ValidationError') {
+        logger.error('Erreur de validation', {
+            name: err.name,
+            message: err.message,
+            errors: err.errors
+        });
         res.status(400).json({
             error: 'Erreur de validation',
             details: Object.values(err.errors).map((e: any) => e.message)
@@ -46,6 +68,11 @@ function errorHandler(err: any, req: Request, res: Response, next: NextFunction)
 
     // * Erreurs de cast MongoDB (ID invalide)
     if (err.name === 'CastError') {
+        logger.error('Erreur de cast MongoDB', {
+            name: err.name,
+            message: err.message,
+            errors: err.errors
+        });
         res.status(400).json({
             error: 'ID invalide'
         });
@@ -53,7 +80,7 @@ function errorHandler(err: any, req: Request, res: Response, next: NextFunction)
     }
 
     // * Pour les erreurs non gérées
-    res.status(500).json({ 
+    res.status(500).json({
         error: "Une erreur inattendue est survenue, merci de réessayer plus tard.",
         // En développement, on peut ajouter plus de détails
         ...(process.env.NODE_ENV === 'development' && { 
@@ -65,6 +92,12 @@ function errorHandler(err: any, req: Request, res: Response, next: NextFunction)
 
 // * Middleware pour les routes non trouvées
 function notFoundHandler(req: Request, res: Response): void {
+    // Log de la route non trouvée avec Winston
+    logger.warn(`Route non trouvée: ${req.method} ${req.url}`, {
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+    });
+
     res.status(404).json({
         error: "Route non trouvée",
         path: req.originalUrl
