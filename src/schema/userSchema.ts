@@ -18,6 +18,14 @@ const userBaseSchema = {
     'any.required': 'Le champ mot de passe est obligatoire',
   }),
 };
+
+const confirmEmailSchema = {
+  token: Joi.string().required().messages({
+    'string.base': 'Le token doit être une chaîne de caractères',
+    'string.required': 'Le champ token est obligatoire',
+  }),
+};
   
 export const createUserSchema = createSchema(userBaseSchema, ['name', 'email', 'password']);
 export const updateUserSchema = createSchema(userBaseSchema);
+export const confirmEmailValidationSchema = createSchema(confirmEmailSchema, ['token']);

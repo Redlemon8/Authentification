@@ -33,7 +33,7 @@ const authService = {
     });
 
     // Créer le lien de confirmation
-    const registerLink = `${process.env.FRONTEND_URL}/confirm-email?token=${token}`;
+    const registerLink = `${process.env.BASE_URL}:${process.env.PORT}/auth/confirm-email/${token}`;
 
     // Envoyer l'email de confirmation
     try {
@@ -59,11 +59,31 @@ const authService = {
       name: newUser.name,
       email: newUser.email,
       password: '', // Masqué pour la sécurité
-      token: newUser.confirmationToken,
-      expirationToken: newUser.confirmationTokenExpires,
+      token: newUser.confirmationToken ?? '',
+      expirationToken: newUser.confirmationTokenExpires ?? new Date(),
       isVerified: newUser.isVerified,
       message: 'Un email de confirmation a été envoyé à votre adresse email',
     };
+  },
+
+  confirmEmail: async (token: string): Promise<{ message: string }> => {
+    const user = await User.findOne({
+      confirmationToken: token,
+      confirmationTokenExpires: { $gt: new Date() }, // Token non expiré
+    });
+    if (!user) {
+      logger.error(`Tentative de confirmation avec token invalide ou expiré: ${token}`);
+      throw new ValidationError('Token de confirmation invalide ou expiré');
+    }
+
+    // Marquer l'utilisateur comme vérifié
+    user.isVerified = true;
+    user.confirmationToken = ''; // Supprimer le token utilisé
+    user.confirmationTokenExpires = new Date(); // Supprimer la date d'expiration
+    await user.save();
+
+    logger.info(`Email confirmé avec succès pour: ${user.email}`);
+    return { message: 'Email confirmé avec succès' };
   },
 };
 
