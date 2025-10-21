@@ -1,5 +1,5 @@
 //src/utils/schema.ts
-import Joi from "joi";
+import Joi from 'joi';
 
 /**
  * Crée un schéma Joi avec des champs requis conditionnels
@@ -7,8 +7,8 @@ import Joi from "joi";
  * @param {Array} requiredFields - Les champs qui doivent être requis
  * @returns {Joi.ObjectSchema} Le schéma Joi final
  */
-export const createSchema = (baseSchema: any, requiredFields: string[] = []) => {
-  const schema = { ...baseSchema };
+export const createSchema = (baseSchema: Record<string, Joi.Schema>, requiredFields: string[] = []): Joi.ObjectSchema => {
+  const schema: Record<string, Joi.Schema> = { ...baseSchema };
   
   requiredFields.forEach((field: string) => {
     if (schema[field]) {

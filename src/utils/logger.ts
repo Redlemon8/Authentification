@@ -6,7 +6,7 @@ const levels = {
   warn: 1,    // Avertissements
   info: 2,    // Informations générales
   http: 3,    // Requêtes HTTP
-  debug: 4    // Informations de débogage
+  debug: 4,   // Informations de débogage
 };
 
 // Configuration des couleurs pour chaque niveau
@@ -15,7 +15,7 @@ const colors = {
   warn: 'yellow',
   info: 'green',
   http: 'magenta',
-  debug: 'white'
+  debug: 'white',
 };
 
 // Ajouter les couleurs à Winston
@@ -29,8 +29,8 @@ const format = winston.format.combine(
   winston.format.colorize({ all: true }),
   // Format de sortie personnalisé
   winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`
-  )
+    (info) => `${info.timestamp} ${info.level}: ${info.message}`,
+  ),
 );
 
 // Configuration du logger
@@ -51,18 +51,18 @@ const logger = winston.createLogger({
       level: 'error',
       format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json()
-      )
+        winston.format.json(),
+      ),
     }),
     // Transport pour tous les logs
     new winston.transports.File({
       filename: 'logs/combined.log',
       format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json()
-      )
-    })
-  ]
+        winston.format.json(),
+      ),
+    }),
+  ],
 });
 
 // Créer le dossier logs s'il n'existe pas
