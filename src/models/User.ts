@@ -12,7 +12,9 @@ const userSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
+// Hook pour hasher le mot de passe avant de sauvegarder
 userSchema.pre('save', async function(next) {
+  // Si le mot de passe est modifié, le hasher
   if (this.isModified('password')) {
     this.password = await argon2.hash(this.password);
   }

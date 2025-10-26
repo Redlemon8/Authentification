@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import authController from './controllers/auth.controller';
 import { validate } from './middlewares/validation';
-import { createUserSchema } from './schema/userSchema';
+import { createUserSchema, loginUserSchema } from './schema/userSchema';
 import { cw } from './middlewares/handleError';
 import { RegisterBody } from './types/express';
+import { LoginBody } from './interfaces/user.interface';
 import authService from './services/auth.service';
 
 const router = Router();
@@ -23,5 +24,7 @@ router.get('/auth/confirm-email/:token', cw(async (req, res) => {
     </html>
   `);
 }));
+
+router.post('/auth/login', validate(loginUserSchema), cw<LoginBody>(authController.login));
 
 export default router;

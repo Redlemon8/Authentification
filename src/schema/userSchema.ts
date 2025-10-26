@@ -29,3 +29,4 @@ const confirmEmailSchema = {
 export const createUserSchema = createSchema(userBaseSchema, ['name', 'email', 'password']);
 export const updateUserSchema = createSchema(userBaseSchema);
 export const confirmEmailValidationSchema = createSchema(confirmEmailSchema, ['token']);
+export const loginUserSchema = createSchema(userBaseSchema, ['email', 'password']);

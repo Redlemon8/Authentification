@@ -1,7 +1,8 @@
-import { IUser, RegisterBody } from '../interfaces/user.interface';
+import { IUser, RegisterBody, LoginBody } from '../interfaces/user.interface';
 import User from '../models/User';
 import crypto from 'crypto';
 import argon2 from 'argon2';
+import jwt from 'jsonwebtoken';
 import sendEmail from '../utils/mailer';
 import logger from '../utils/logger';
 import { ValidationError } from '../utils/error';
@@ -15,9 +16,6 @@ const authService = {
       throw new ValidationError('Un utilisateur avec cet email existe déjà');
     }
 
-    // Hasher le mot de passe avec argon2
-    const hashedPassword = await argon2.hash(userData.password);
-
     // Générer un token de confirmation
     const token = crypto.randomBytes(32).toString('hex');
     const expirationToken = new Date(Date.now() + 3600000); // 1 heure
@@ -26,7 +24,7 @@ const authService = {
     const newUser = await User.create({
       name: userData.name,
       email: userData.email,
-      password: hashedPassword,
+      password: userData.password,
       confirmationToken: token,
       confirmationTokenExpires: expirationToken,
       isVerified: false,
@@ -84,6 +82,36 @@ const authService = {
 
     logger.info(`Email confirmé avec succès pour: ${user.email}`);
     return { message: 'Email confirmé avec succès' };
+  },
+
+  login: async (userData: LoginBody): Promise<IUser & { message: string }> => {
+    const user = await User.findOne({ email: userData.email });
+    if (!user) {
+      logger.error(`Tentative de connexion avec email invalide: ${userData.email}`);
+      throw new ValidationError('Email ou mot de passe invalide');
+    }
+
+    // Vérifier si le mot de passe est correct
+    const isPasswordValid = await argon2.verify(user.password, userData.password as string);
+    
+    if (!isPasswordValid) {
+      logger.error(`Tentative de connexion avec mot de passe invalide: ${userData.email}`);
+      throw new ValidationError('Email ou mot de passe invalide');
+    }
+    
+    // Générer un token JWT
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET ?? '', { expiresIn: '15 minutes' });
+
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      password: '',
+      token: token,
+      expirationToken: new Date(Date.now() + 15 * 60 * 1000),
+      isVerified: user.isVerified,
+      message: 'Connexion réussie',
+    };
   },
 };
 

@@ -9,3 +9,5 @@ export interface IUser {
 }
 
 export type RegisterBody = Pick<IUser, 'name' | 'email' | 'password'>;
+
+export type LoginBody = Pick<IUser, 'email' | 'password'>;
