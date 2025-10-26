@@ -10,28 +10,18 @@ const router = Router();
 
 router.post('/auth/register', validate(createUserSchema), cw<RegisterBody>(authController.register));
 
-// Route pour confirmer l'email
-router.get('/auth/confirm-email/:token', (req, res) => {
-  authService.confirmEmail(req.params.token)
-    .then(result => {
-      res.send(`
-        <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: green;">✅ Email confirmé !</h1>
-            <p>${result.message}</p>
-          </body>
-        </html>
-      `);
-    })
-    .catch(error => {
-      res.send(`
-        <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: red;">❌ Erreur</h1>
-            <p>${error.message}</p>
-          </body>
-        </html>
-      `);
-    });
-});
+// Route pour confirmer l'email, si nous etions connectés à un frontend, nous pourrions rediriger vers la page de confirmation
+router.get('/auth/confirm-email/:token', cw(async (req, res) => {
+  const result = await authService.confirmEmail(req.params.token ?? '');
+  
+  res.status(200).send(`
+    <html>
+      <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+        <h1 style="color: green;">✅ Email confirmé !</h1>
+        <p>${result.message}</p>
+      </body>
+    </html>
+  `);
+}));
+
 export default router;
