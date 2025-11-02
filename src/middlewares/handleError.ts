@@ -2,7 +2,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError, ValidationError } from '../utils/error';
 import logger from '../utils/logger';
-import { TypedRequest } from '../types/express';
+import { TypedRequest } from '../types';
 
 function cw<TBody = unknown, TParams = Record<string, never>, TQuery = unknown>(
   controller: (req: TypedRequest<TBody, TParams, TQuery>, res: Response, next: NextFunction) => Promise<void> | void,

@@ -1,14 +1,8 @@
-// types/express.ts
+// Express type extensions
 import { Request } from 'express';
 
 export type TypedRequest<
   TBody = unknown,
-  TParams = Record<string, never>,
+  TParams = unknown,
   TQuery = unknown
 > = Request<TParams, unknown, TBody, TQuery>;
-
-export interface RegisterBody {
-  name: string;
-  email: string;
-  password: string;
-}

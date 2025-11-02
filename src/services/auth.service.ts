@@ -1,4 +1,4 @@
-import { IUser, RegisterBody, LoginBody } from '../interfaces/user.interface';
+import { IUser, RegisterBody, LoginBody, RefreshAccessTokenBody, RefreshAccessTokenResponse } from '../types';
 import User from '../models/User';
 import crypto from 'crypto';
 import argon2 from 'argon2';
@@ -57,8 +57,10 @@ const authService = {
       name: newUser.name,
       email: newUser.email,
       password: '', // Masqué pour la sécurité
-      token: newUser.confirmationToken ?? '',
-      expirationToken: newUser.confirmationTokenExpires ?? new Date(),
+      accessToken: '',
+      expirationAccessToken: new Date(Date.now() + 15 * 60 * 1000),
+      refreshToken: '',
+      expirationRefreshToken: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 jours
       isVerified: newUser.isVerified,
       message: 'Un email de confirmation a été envoyé à votre adresse email',
     };
@@ -100,17 +102,44 @@ const authService = {
     }
     
     // Générer un token JWT
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET ?? '', { expiresIn: '15 minutes' });
+    const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET ?? '', { expiresIn: '15 minutes' });
+    const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET ?? '', { expiresIn: '7 days' });
+    const expirationAccessToken = new Date(Date.now() + 15 * 60 * 1000);
+    const expirationRefreshToken = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    logger.info(`Connexion réussie pour: ${user.email}`);
+    
 
     return {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
       password: '',
-      token: token,
-      expirationToken: new Date(Date.now() + 15 * 60 * 1000),
+      accessToken: accessToken,
+      expirationAccessToken: expirationAccessToken,
+      refreshToken: refreshToken,
+      expirationRefreshToken: expirationRefreshToken,
       isVerified: user.isVerified,
       message: 'Connexion réussie',
+    };
+  },
+
+  refreshAccessToken: async (refreshTokenData: RefreshAccessTokenBody): Promise<RefreshAccessTokenResponse> => {
+    const decoded = jwt.verify(refreshTokenData.refreshToken, process.env.JWT_SECRET ?? '') as { userId: string };
+    const user = await User.findOne({ _id: decoded.userId });
+    if (!user) {
+      logger.error(`Utilisateur non trouvé avec refresh token: ${refreshTokenData.refreshToken}`);
+      throw new ValidationError('Utilisateur non trouvé');
+    }
+    const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET ?? '', { expiresIn: '15 minutes' });
+    const expirationAccessToken = new Date(Date.now() + 15 * 60 * 1000);
+    const expirationRefreshToken = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    logger.info(`Refresh token réussi pour: ${user.email}`);
+    return {
+      accessToken: accessToken,
+      expirationAccessToken: expirationAccessToken,
+      refreshToken: refreshTokenData.refreshToken,
+      expirationRefreshToken: expirationRefreshToken,
     };
   },
 };
