@@ -3,7 +3,7 @@ import authController from './controllers/auth.controller';
 import { validate } from './middlewares/validation';
 import { createUserSchema, loginUserSchema } from './schema/userSchema';
 import { cw } from './middlewares/handleError';
-import { RegisterBody, LoginBody, RefreshAccessTokenBody } from './types';
+import { RegisterBody, LoginBody } from './types';
 import authService from './services/auth.service';
 
 const router = Router();
@@ -25,6 +25,6 @@ router.get('/auth/confirm-email/:token', cw(async (req, res) => {
 }));
 
 router.post('/auth/login', validate(loginUserSchema), cw<LoginBody>(authController.login));
-router.post('/auth/refresh-access-token', cw<RefreshAccessTokenBody>(authController.refreshAccessToken));
+router.post('/auth/refresh-access-token', cw(authController.refreshAccessToken));
 
 export default router;

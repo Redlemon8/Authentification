@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import https from 'https';
+import cookieParser from 'cookie-parser';
 import fs from 'fs';
 import 'dotenv/config';
 import cors from 'cors';
@@ -12,6 +13,7 @@ const app: Application = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(router);
 app.use(errorHandler);
 app.use(notFoundHandler);

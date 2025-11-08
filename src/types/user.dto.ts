@@ -10,14 +10,3 @@ export interface LoginBody {
   password: string;
 }
 
-export interface RefreshAccessTokenBody {
-  refreshToken: string;
-}
-
-export interface RefreshAccessTokenResponse {
-  accessToken: string;
-  expirationAccessToken: Date;
-  refreshToken: string;
-  expirationRefreshToken: Date;
-}
-
