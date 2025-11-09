@@ -19,5 +19,8 @@ export interface IUserDataResponse {
     isVerified: boolean;
 }
 
+export interface ILogoutResponse {
+    message: string;
+}
 
 

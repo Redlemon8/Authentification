@@ -26,5 +26,6 @@ router.get('/auth/confirm-email/:token', cw(async (req, res) => {
 
 router.post('/auth/login', validate(loginUserSchema), cw<LoginBody>(authController.login));
 router.post('/auth/refresh-access-token', cw(authController.refreshAccessToken));
+router.post('/auth/logout', cw(authController.logout));
 
 export default router;

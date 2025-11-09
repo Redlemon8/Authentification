@@ -1,11 +1,11 @@
 import { RegisterBody, LoginBody, IUserDataResponse, IAccessTokenResponse } from '../types';
 import User from '../models/User';
 import crypto from 'crypto';
-import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import sendEmail from '../utils/mailer';
 import logger from '../utils/logger';
 import { ValidationError } from '../utils/error';
+import redisClient from '../db/coTokenData';
 
 type IloginServiceResponse = {
   user: IUserDataResponse;
@@ -93,14 +93,14 @@ const authService = {
   },
 
   login: async (userData: LoginBody): Promise<IloginServiceResponse> => {
-    const user = await User.findOne({ email: userData.email });
+    const user = await User.findOne({ email: userData.email }).select('+password');
     if (!user) {
       logger.error(`Tentative de connexion avec email invalide: ${userData.email}`);
       throw new ValidationError('Email ou mot de passe invalide');
     }
 
     // Vérifier si le mot de passe est correct
-    const isPasswordValid = await argon2.verify(user.password, userData.password as string);
+    const isPasswordValid = await user.checkPassword(userData.password);
     
     if (!isPasswordValid) {
       logger.error(`Tentative de connexion avec mot de passe invalide: ${userData.email}`);
@@ -133,6 +133,13 @@ const authService = {
   },
   
   refreshAccessToken: async (refreshToken: string): Promise<IAccessTokenResponse> => {
+
+    const isBlacklisted = await redisClient.client.get(refreshToken);
+    if (isBlacklisted) {
+      logger.error(`Refresh token blacklisté: ${refreshToken}`);
+      throw new ValidationError('Refresh token blacklisté, veuillez vous reconnecter');
+    }
+
     const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET ?? '') as { userId: string };
     const user = await User.findOne({ _id: decoded.userId });
     if (!user) {
@@ -149,6 +156,29 @@ const authService = {
       expirationAccessToken: expirationAccessToken,
       message: 'Refresh token réussi',
     };
+  },
+
+  logout: async (refreshToken: string): Promise<{ message: string }> => {
+
+    const decoded = jwt.decode(refreshToken) as { exp?: number };
+
+    if (!decoded?.exp) {
+      logger.warn('Tentative de déconnexion avec un token malformé ou sans expiration');
+      throw new ValidationError('Token de refresh invalide');
+    }
+
+    const expirationTimestamp = decoded.exp;
+    const nowTimestamp = Math.floor(Date.now() / 1000);
+    const timeLeft = expirationTimestamp - nowTimestamp;
+
+    if (timeLeft > 0) {
+      await redisClient.client.set(refreshToken, 'blacklisted', {
+        EX: timeLeft,
+      });
+      logger.info(`Refresh token blacklisté jusqu'à expiration naturelle: ${refreshToken}`);
+    }
+    logger.info(`Refresh token déconnecté: ${refreshToken}`);
+    return { message: 'Déconnexion réussie' };
   },
 };
 

@@ -7,6 +7,8 @@ import cors from 'cors';
 import router from './router';
 import connectDB from './db/database';
 import { errorHandler, notFoundHandler } from './middlewares/handleError';
+import redisClient from './db/coTokenData';
+
 const app: Application = express();
 
 // Middleware
@@ -17,6 +19,9 @@ app.use(cookieParser());
 app.use(router);
 app.use(errorHandler);
 app.use(notFoundHandler);
+
+// Connexion à Redis
+void redisClient.connectRedis();
 
 // Connexion à MongoDB
 void connectDB();

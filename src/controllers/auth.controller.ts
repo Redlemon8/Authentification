@@ -1,7 +1,7 @@
 import { Response, NextFunction, Request } from 'express';
 import { TypedRequest } from '../types';
 import authService from '../services/auth.service';
-import { RegisterBody, LoginBody, IUserDataResponse, ILoginResponse, IAccessTokenResponse } from '../types';
+import { RegisterBody, LoginBody, IUserDataResponse, ILoginResponse, IAccessTokenResponse, ILogoutResponse } from '../types';
 import { ValidationError } from '../utils/error';
 
 const authController = {
@@ -49,6 +49,31 @@ const authController = {
     }
     const result = await authService.refreshAccessToken(refreshToken);
     res.status(200).json(result);
+  },
+
+  logout: async (
+    req: TypedRequest<Request>,
+    res: Response<ILogoutResponse>,
+    _next: NextFunction,
+  ): Promise<void> => {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      res.clearCookie('refreshToken');
+      res.status(204).json({ message: 'Déconnexion réussie' });
+      return;
+    }
+    
+    const result = await authService.logout(refreshToken);
+
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+    });
+
+    res.status(200).json({ message: result.message });
+    return;
   },
 };
 
