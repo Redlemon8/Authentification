@@ -12,9 +12,10 @@ const userBaseSchema = {
     'string.email': 'L\'email doit être une adresse email valide',
     'any.required': 'Le champ email est obligatoire',
   }),
-  password: Joi.string().min(8).messages({
+  password: Joi.string().min(12).messages({
     'string.base': 'Le mot de passe doit être une chaîne de caractères',
     'string.min': 'Le mot de passe doit contenir au moins {#limit} caractères',
+    'string.pattern.base': 'Le mot de passe doit contenir au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial',
     'any.required': 'Le champ mot de passe est obligatoire',
   }),
 };

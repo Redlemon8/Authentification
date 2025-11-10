@@ -27,6 +27,8 @@ const authService = {
 
     // Générer un token de confirmation
     const token = crypto.randomBytes(32).toString('hex');
+    // Hacher le token pour le stocker dans la base de données
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     const expirationToken = new Date(Date.now() + 3600000); // 1 heure
 
     // Créer le nouvel utilisateur
@@ -34,7 +36,7 @@ const authService = {
       name: userData.name,
       email: userData.email,
       password: userData.password,
-      confirmationToken: token,
+      confirmationToken: hashedToken,
       confirmationTokenExpires: expirationToken,
       isVerified: false,
     });
@@ -73,8 +75,11 @@ const authService = {
   },
 
   confirmEmail: async (token: string): Promise<{ message: string }> => {
+    // Hacher le token pour le comparer avec le token stocké dans la base de données
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    // Vérifier si le token est valide et non expiré et si l'utilisateur existe
     const user = await User.findOne({
-      confirmationToken: token,
+      confirmationToken: hashedToken,
       confirmationTokenExpires: { $gt: new Date() }, // Token non expiré
     });
     if (!user) {
@@ -84,8 +89,8 @@ const authService = {
 
     // Marquer l'utilisateur comme vérifié
     user.isVerified = true;
-    user.confirmationToken = ''; // Supprimer le token utilisé
-    user.confirmationTokenExpires = new Date(); // Supprimer la date d'expiration
+    user.confirmationToken = null;
+    user.confirmationTokenExpires = null;
     await user.save();
 
     logger.info(`Email confirmé avec succès pour: ${user.email}`);
@@ -113,7 +118,6 @@ const authService = {
 
     const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET ?? '', { expiresIn: '7 days' });
     const expirationRefreshToken = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
     logger.info(`Connexion réussie pour: ${user.email}`);
     
 
@@ -133,17 +137,23 @@ const authService = {
   },
   
   refreshAccessToken: async (refreshToken: string): Promise<IAccessTokenResponse> => {
-
-    const isBlacklisted = await redisClient.client.get(refreshToken);
+    const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const isBlacklisted = await redisClient.client.get(hashedRefreshToken);
     if (isBlacklisted) {
-      logger.error(`Refresh token blacklisté: ${refreshToken}`);
+      logger.error('Refresh token blacklisté');
       throw new ValidationError('Refresh token blacklisté, veuillez vous reconnecter');
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET ?? '') as { userId: string };
+    let decoded: { userId: string };
+    try {
+      decoded = jwt.verify(refreshToken, process.env.JWT_SECRET ?? '') as { userId: string };
+    } catch (error) {
+      logger.error('Refresh token invalide lors de la vérification JWT', error);
+      throw new ValidationError('Refresh token invalide');
+    }
     const user = await User.findOne({ _id: decoded.userId });
     if (!user) {
-      logger.error(`Utilisateur non trouvé avec refresh token: ${refreshToken}`);
+      logger.error('Utilisateur non trouvé avec refresh token');
       throw new ValidationError('Utilisateur non trouvé');
     }
     logger.info(`Refresh token réussi pour: ${user.email}`);
@@ -159,7 +169,7 @@ const authService = {
   },
 
   logout: async (refreshToken: string): Promise<{ message: string }> => {
-
+    const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const decoded = jwt.decode(refreshToken) as { exp?: number };
 
     if (!decoded?.exp) {
@@ -172,12 +182,12 @@ const authService = {
     const timeLeft = expirationTimestamp - nowTimestamp;
 
     if (timeLeft > 0) {
-      await redisClient.client.set(refreshToken, 'blacklisted', {
+      await redisClient.client.set(hashedRefreshToken, 'blacklisted', {
         EX: timeLeft,
       });
-      logger.info(`Refresh token blacklisté jusqu'à expiration naturelle: ${refreshToken}`);
+      logger.info('Refresh token blacklisté jusqu\'à expiration naturelle');
     }
-    logger.info(`Refresh token déconnecté: ${refreshToken}`);
+    logger.info('Refresh token déconnecté');
     return { message: 'Déconnexion réussie' };
   },
 };
