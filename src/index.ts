@@ -1,20 +1,27 @@
 import express, { Application } from 'express';
 import https from 'https';
+import cookieParser from 'cookie-parser';
 import fs from 'fs';
 import 'dotenv/config';
 import cors from 'cors';
 import router from './router';
 import connectDB from './db/database';
 import { errorHandler, notFoundHandler } from './middlewares/handleError';
+import redisClient from './db/coTokenData';
+
 const app: Application = express();
 
 // Middleware
 app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(router);
 app.use(errorHandler);
 app.use(notFoundHandler);
+
+// Connexion à Redis
+void redisClient.connectRedis();
 
 // Connexion à MongoDB
 void connectDB();

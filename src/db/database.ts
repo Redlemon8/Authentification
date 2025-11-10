@@ -3,8 +3,10 @@ import mongoose from 'mongoose';
 const connectDB = async (): Promise<void> => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI as string);
+    // eslint-disable-next-line no-console
     console.log(`🚀 MongoDB connecté: ${conn.connection.host}`);
   } catch (error: any) {
+    // eslint-disable-next-line no-console
     console.error('❌ Erreur de connexion MongoDB:', error.message);
     process.exit(1);
   }
